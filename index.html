@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Photoism Style Photobooth</title>
+<title>Photoism with Me Overlay</title>
 
 <meta name="viewport"
   content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -27,7 +27,7 @@ video {
   width: 100vw;
   max-height: 65vh;
   background: black;
-  transform: scaleX(-1); /* mirror selfie preview */
+  transform: scaleX(-1); /* mirror selfie */
 }
 
 .flash {
@@ -59,7 +59,6 @@ video {
   text-shadow: 0 0 12px black;
 }
 
-/* PHOTOISM STRIP */
 .strip {
   width: 240px;
   margin: 20px auto;
@@ -79,7 +78,6 @@ video {
 }
 </style>
 </head>
-
 <body>
 
 <div class="camera">
@@ -110,13 +108,18 @@ const shutter = document.getElementById("shutter");
 let busy = false;
 let index = 0;
 
-/* FRONT CAMERA ONLY */
+/* Load your photo overlay (transparent PNG) */
+const myPhoto = new Image();
+myPhoto.src = "my-photo.png"; // replace with your file
+myPhoto.onload = () => console.log("Overlay loaded");
+
+/* Front camera */
 navigator.mediaDevices.getUserMedia({
   video: { facingMode: "user" },
   audio: false
 }).then(stream => video.srcObject = stream);
 
-/* unlock audio (iOS requirement) */
+/* unlock shutter sound (iOS) */
 document.body.addEventListener("touchstart", () => {
   shutter.play().then(() => {
     shutter.pause();
@@ -124,7 +127,7 @@ document.body.addEventListener("touchstart", () => {
   });
 }, { once: true });
 
-/* tap anywhere to start */
+/* Tap anywhere to start */
 document.body.addEventListener("touchstart", async () => {
   if (busy) return;
   busy = true;
@@ -139,7 +142,7 @@ document.body.addEventListener("touchstart", async () => {
   setTimeout(() => busy = false, 25000);
 });
 
-/* countdown */
+/* Countdown */
 function countdown(n) {
   return new Promise(resolve => {
     countdownEl.textContent = n;
@@ -156,9 +159,9 @@ function countdown(n) {
   });
 }
 
-/* PHOTOISM camera shot look */
+/* Draw Photoism frame + overlay */
 function drawPhotoismFrame() {
-  /* white inner border */
+  // White border
   ctx.lineWidth = canvas.width * 0.035;
   ctx.strokeStyle = "#ffffff";
   ctx.strokeRect(
@@ -168,7 +171,7 @@ function drawPhotoismFrame() {
     canvas.height - ctx.lineWidth
   );
 
-  /* soft vignette */
+  // Vignette
   const g = ctx.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
@@ -182,7 +185,7 @@ function drawPhotoismFrame() {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  /* date text */
+  // Date
   ctx.font = `${canvas.width * 0.035}px Helvetica`;
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
@@ -191,9 +194,17 @@ function drawPhotoismFrame() {
     canvas.width / 2,
     canvas.height - canvas.width * 0.04
   );
+
+  // Draw your photo overlay
+  if (myPhoto.complete) {
+    const scale = 0.4; // adjust size
+    const w = canvas.width * scale;
+    const h = myPhoto.height / myPhoto.width * w;
+    ctx.drawImage(myPhoto, canvas.width - w - 10, 10, w, h);
+  }
 }
 
-/* capture */
+/* Capture function */
 function capture() {
   flash.classList.add("active");
   shutter.currentTime = 0;
@@ -202,14 +213,14 @@ function capture() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  /* mirrored selfie draw */
+  // mirrored selfie
   ctx.save();
   ctx.scale(-1, 1);
   ctx.filter = "contrast(1.05)";
   ctx.drawImage(video, -canvas.width, 0);
   ctx.restore();
 
-  /* photoism look */
+  // photoism frame + overlay
   drawPhotoismFrame();
 
   slots[index].style.backgroundImage =
