@@ -44,16 +44,16 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1);
   display: block;
   border-radius: 12px;
 }
 
 #overlay {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
-  width: 60%;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   object-fit: cover;
   opacity: 1;
@@ -125,11 +125,8 @@ function capture() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // Mirror video
-  ctx.save();
-  ctx.scale(-1,1);
-  ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-  ctx.restore();
+  // Draw video normally (no mirror)
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   // Draw overlay
   if (overlay.complete) {
@@ -151,11 +148,10 @@ function capture() {
   ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.height*0.05);
 
   // Replace video with captured photo
-  const dataURL = canvas.toDataURL("image/png");
   video.style.display = "none"; // hide live video
   overlay.style.display = "none"; // hide overlay
   const img = document.createElement("img");
-  img.src = dataURL;
+  img.src = canvas.toDataURL("image/png");
   img.style.width = "100%";
   img.style.height = "100%";
   img.style.objectFit = "cover";
