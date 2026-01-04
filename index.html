@@ -134,12 +134,9 @@ function capture() {
   ctx.fillStyle = "#ffffff";
   ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.height*0.05);
 
-  // Auto-download the photo
-  const dataURL = canvas.toDataURL("image/png");
-  const a = document.createElement("a");
-  a.href = dataURL;
-  a.download = `photo-${Date.now()}.png`;
-  a.click();
+  // Photo is ready in canvas
+  // No auto-download
+  console.log("Captured photo is ready in canvas.");
 }
 
 /* Footer live date/time */
