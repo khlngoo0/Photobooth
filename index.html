@@ -27,7 +27,7 @@ body {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
-#camera-window {
+#live-window {
   position: relative;
   width: 80vw;
   max-width: 360px;
@@ -35,18 +35,15 @@ body {
   margin: 20px auto;
   overflow: hidden;
   border-radius: 12px;
-  background: black;
+  background: black; /* just black now */
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-#camera-window video,
-#camera-window img {
+#video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
-  display: block;
-  border-radius: 12px;
 }
 
 #overlay {
@@ -60,10 +57,12 @@ body {
   opacity: 1;
 }
 
-#footer-date {
-  font-size: 0.9rem;
-  color: #555;
-  margin: 8px 0 20px 0;
+#captured-photo {
+  width: 90%;
+  max-width: 360px;
+  margin: 20px auto;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 button {
@@ -71,6 +70,12 @@ button {
   font-size: 1rem;
   border-radius: 8px;
   margin: 10px;
+}
+
+#footer-date {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 8px 0 20px 0;
 }
 </style>
 </head>
@@ -80,11 +85,15 @@ button {
 Take a Photo<br>with Hugo
 </header>
 
-<div id="camera-window">
+<div id="live-window">
   <video id="video" autoplay playsinline></video>
   <img id="overlay" src="my-photo.png" alt="Overlay">
 </div>
 
+<!-- Captured photo -->
+<img id="captured-photo" alt="Captured Photo" src="">
+
+<!-- Share button -->
 <button id="share-photo">Share / Save</button>
 
 <footer id="footer-date"></footer>
@@ -95,12 +104,12 @@ Take a Photo<br>with Hugo
 <script>
 const video = document.getElementById("video");
 const overlay = document.getElementById("overlay");
-const cameraWindow = document.getElementById("camera-window");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const shutter = document.getElementById("shutter");
 const footer = document.getElementById("footer-date");
 const headerText = document.getElementById("logo").innerText;
+const capturedImg = document.getElementById("captured-photo");
 const shareBtn = document.getElementById("share-photo");
 
 /* Front camera */
@@ -116,8 +125,8 @@ document.body.addEventListener("touchstart", () => {
   shutter.play().then(() => { shutter.pause(); shutter.currentTime = 0; });
 }, { once: true });
 
-/* Capture photo and replace video with captured image */
-cameraWindow.addEventListener("click", capture);
+/* Capture photo */
+document.getElementById("live-window").addEventListener("click", capture);
 
 function capture() {
   shutter.currentTime = 0;
@@ -137,7 +146,7 @@ function capture() {
     ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
   }
 
-  // Draw header
+  // Draw header text
   ctx.font = `${canvas.width * 0.06}px "Dancing Script", cursive`;
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "center";
@@ -151,16 +160,8 @@ function capture() {
   ctx.fillStyle = "#ffffff";
   ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.height*0.05);
 
-  // Replace video with captured photo
-  const dataURL = canvas.toDataURL("image/png");
-  video.style.display = "none"; // hide live video
-  overlay.style.display = "none"; // hide overlay
-  const img = document.createElement("img");
-  img.src = dataURL;
-  img.style.width = "100%";
-  img.style.height = "100%";
-  img.style.objectFit = "cover";
-  cameraWindow.appendChild(img);
+  // Show captured photo
+  capturedImg.src = canvas.toDataURL("image/png");
 }
 
 /* Share button using Web Share API */
