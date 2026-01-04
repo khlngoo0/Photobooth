@@ -31,11 +31,11 @@ body {
   position: relative;
   width: 80vw;
   max-width: 360px;
-  aspect-ratio: 3 / 4; /* portrait ratio */
+  aspect-ratio: 3 / 4; /* Polaroid portrait ratio */
   margin: 20px auto;
   overflow: hidden;
   border-radius: 12px;
-  background: black; /* just black now */
+  background: url('polaroid-background.png') no-repeat center/cover;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -135,33 +135,40 @@ function capture() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // Mirror video
-  ctx.save();
-  ctx.scale(-1,1);
-  ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-  ctx.restore();
+  // Draw Polaroid background first
+  const polaroidBg = new Image();
+  polaroidBg.src = 'polaroid-background.png';
+  polaroidBg.onload = () => {
+    ctx.drawImage(polaroidBg, 0, 0, canvas.width, canvas.height);
 
-  // Draw overlay
-  if (overlay.complete) {
-    ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
-  }
+    // Mirror video inside Polaroid
+    ctx.save();
+    ctx.scale(-1,1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
 
-  // Draw header text
-  ctx.font = `${canvas.width * 0.06}px "Dancing Script", cursive`;
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.fillText(headerText.split("\n")[0], canvas.width/2, canvas.height*0.08);
-  ctx.fillText(headerText.split("\n")[1], canvas.width/2, canvas.height*0.15);
+    // Draw overlay
+    if (overlay.complete) {
+      ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+    }
 
-  // Draw footer date/time
-  const now = new Date();
-  const options = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
-  ctx.font = `${canvas.width * 0.04}px Helvetica`;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.height*0.05);
+    // Draw header text
+    ctx.font = `${canvas.width * 0.06}px "Dancing Script", cursive`;
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText(headerText.split("\n")[0], canvas.width/2, canvas.height*0.08);
+    ctx.fillText(headerText.split("\n")[1], canvas.width/2, canvas.height*0.15);
 
-  // Show captured photo
-  capturedImg.src = canvas.toDataURL("image/png");
+    // Draw footer date/time
+    const now = new Date();
+    const options = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
+    ctx.font = `${canvas.width * 0.04}px Helvetica`;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.height*0.05);
+
+    // Show captured photo in page
+    capturedImg.src = canvas.toDataURL("image/png");
+  };
 }
 
 /* Share button using Web Share API */
@@ -173,7 +180,7 @@ shareBtn.addEventListener("click", async () => {
       try {
         await navigator.share({
           files: filesArray,
-          title: "My Photo",
+          title: "My Polaroid Photo",
           text: "Take a photo with Hugo!"
         });
       } catch (err) {
@@ -197,3 +204,4 @@ setInterval(updateFooterDateTime, 60000);
 
 </body>
 </html>
+
