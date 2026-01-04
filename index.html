@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>iPhone Vintage Photobooth</title>
+
+<!-- iPhone-only setup -->
+<meta name="viewport"
+  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+<style>
+body {
+  margin: 0;
+  background: #f3efe6;
+  font-family: Georgia, serif;
+  text-align: center;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+video {
+  width: 100vw;
+  max-height: 65vh;
+  background: black;
+  transform: scaleX(-1); /* mirror preview */
+}
+
+.camera {
+  position: relative;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flash.active {
+  animation: flash 0.2s;
+}
+
+@keyframes flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  color: white;
+  text-shadow: 0 0 10px black;
+}
+
+.strip {
+  width: 240px;
+  margin: 20px auto;
+  padding: 10px;
+  background: #e7e2d8;
+  border: 8px solid #222;
+  position: relative;
+}
+
+.slot {
+  width: 220px;
+  height: 140px;
+  margin: 6px auto;
+  background: black;
+  border: 4px solid white;
+  background-size: cover;
+  background-position: center;
+  filter: sepia(0.6) contrast(1.1);
+}
+
+/* film burn */
+.strip::after {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle, transparent 60%, rgba(0,0,0,.45));
+  animation: burn 4s infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes burn {
+  from { opacity: .2; }
+  to { opacity: .5; }
+}
+
+/* print 2x6 inch */
+@media print {
+  body * { visibility: hidden; }
+  .strip {
+    visibility: visible;
+    position: absolute;
+    width: 2in;
+    height: 6in;
+    top: 0;
+    left: 0;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="camera">
+  <video id="video" autoplay playsinline></video>
+  <div class="flash" id="flash"></div>
+  <div class="countdown" id="countdown"></div>
+</div>
+
+<div class="strip" id="strip">
+  <div class="slot"></div>
+  <div class="slot"></div>
+  <div class="slot"></div>
+  <div class="slot"></div>
+</div>
+
+<canvas id="canvas" hidden></canvas>
+<audio id="shutter" src="https://cdn.jsdelivr.net/gh/jshawl/AudioFX/sounds/camera-shutter-click-03.mp3"></audio>
+
+<!-- libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.3.2/gifshot.min.js"></script>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const slots = document.querySelectorAll(".slot");
+const countdownEl = document.getElementById("countdown");
+const flash = document.getElementById("flash");
+const shutter = document.getElementById("shutter");
+
+let busy = false;
+let index = 0;
+
+/* FRONT CAMERA ONLY */
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "user" },
+  audio: false
+}).then(stream => video.srcObject = stream);
+
+/* unlock sound on first touch */
+document.body.addEventListener("touchstart", () => {
+  shutter.play().then(() => {
+    shutter.pause();
+    shutter.currentTime = 0;
+  });
+}, { once: true });
+
+/* tap anywhere to start */
+document.body.addEventListener("touchstart", async () => {
+  if (busy) return;
+  busy = true;
+  index = 0;
+  slots.forEach(s => s.style.backgroundImage = "");
+
+  for (let i = 0; i < 4; i++) {
+    await countdown(3);
+    capture();
+  }
+
+  setTimeout(() => busy = false, 25000);
+});
+
+function countdown(n) {
+  return new Promise(resolve => {
+    countdownEl.textContent = n;
+    const t = setInterval(() => {
+      n--;
+      if (n === 0) {
+        clearInterval(t);
+        countdownEl.textContent = "";
+        resolve();
+      } else countdownEl.textContent = n;
+    }, 1000);
+  });
+}
+
+function capture() {
+  flash.classList.add("active");
+  shutter.currentTime = 0;
+  shutter.play();
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  ctx.save();
+  ctx.scale(-1, 1);
+  ctx.filter = "sepia(0.6) contrast(1.1)";
+  ctx.drawImage(video, -canvas.width, 0);
+  ctx.restore();
+
+  slots[index].style.backgroundImage =
+    `url(${canvas.toDataURL("image/png")})`;
+
+  index++;
+  setTimeout(() => flash.classList.remove("active"), 200);
+}
+</script>
+
+</body>
+</html>
