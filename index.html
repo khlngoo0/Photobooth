@@ -2,88 +2,67 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Live Photobooth Preview</title>
-
+<title>Take a Photo with Hugo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
-<!-- Google Font for cursive logo -->
-<link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
-
 <style>
 body {
   margin: 0;
-  background: #fff;
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   text-align: center;
-  touch-action: manipulation;
-  user-select: none;
+  background: #fff;
 }
 
-/* Header / Logo (2-row) */
 #logo {
   font-family: "Dancing Script", cursive;
   font-size: 2.2rem;
-  color: #222;
-  margin: 12px 0;
   line-height: 1.2;
-  letter-spacing: 1px;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  margin: 12px 0;
 }
 
-/* Live photo window */
 #live-window {
   position: relative;
   width: 100vw;
   max-height: 70vh;
   margin: 0 auto;
-  background: black;
   overflow: hidden;
   border-radius: 14px;
   touch-action: manipulation;
 }
 
-/* Video feed */
 #video {
   width: 100%;
-  transform: scaleX(-1); /* mirror selfie */
+  transform: scaleX(-1);
   display: block;
 }
 
-/* Overlay image (visual only) */
 #overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none; /* allow clicks to pass through */
+  pointer-events: none; /* allows tap to pass through */
   object-fit: cover;
   opacity: 1;
 }
 
-/* Footer date/time */
 #footer-date {
-  font-family: Helvetica, Arial, sans-serif;
   font-size: 0.9rem;
   color: #555;
-  text-align: center;
   margin: 8px 0 20px 0;
 }
 </style>
 </head>
 <body>
 
-<!-- Header 2-row -->
-<header id="logo">
-  Take a Photo<br>with Hugo
-</header>
+<header id="logo">Take a Photo<br>with Hugo</header>
 
-<!-- Live camera window -->
 <div id="live-window">
   <video id="video" autoplay playsinline></video>
-  <img id="overlay" src="my-photo.png" alt="Overlay">
+  <img id="overlay" src="" alt="Overlay">
 </div>
 
 <footer id="footer-date"></footer>
@@ -99,19 +78,24 @@ const ctx = canvas.getContext("2d");
 const shutter = document.getElementById("shutter");
 const footer = document.getElementById("footer-date");
 
-/* Front camera */
+// Access front camera
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-  .then(stream => video.srcObject = stream);
+  .then(stream => {
+    video.srcObject = stream;
+    video.addEventListener('loadedmetadata', () => {
+      video.play();
+    });
+  })
+  .catch(err => alert("Camera access denied: " + err));
 
-/* Unlock audio on iOS */
+// Unlock iOS audio
 document.body.addEventListener("touchstart", () => {
   shutter.play().then(() => { shutter.pause(); shutter.currentTime = 0; });
 }, { once: true });
 
-/* Tap anywhere on live window to capture */
+// Tap window to capture
 document.getElementById("live-window").addEventListener("click", capture);
 
-/* Capture function */
 function capture() {
   shutter.currentTime = 0;
   shutter.play();
@@ -119,20 +103,25 @@ function capture() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // Mirror selfie
   ctx.save();
-  ctx.scale(-1,1);
+  ctx.scale(-1,1); // mirror
   ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
   ctx.restore();
 
-  // Capture only camera feed (overlay stays untouched)
-  const capturedDataURL = canvas.toDataURL("image/png");
+  // Convert to image URL
+  const dataURL = canvas.toDataURL("image/png");
 
-  // Optional: you could download or save capturedDataURL
-  console.log("Captured photo ready:", capturedDataURL);
+  // Automatically download captured photo
+  const a = document.createElement("a");
+  a.href = dataURL;
+  a.download = `photo-${Date.now()}.png`;
+  a.click();
+
+  // Optional: log for debugging
+  console.log("Captured photo:", dataURL);
 }
 
-/* Footer date/time live (no seconds) */
+// Footer date/time without seconds
 function updateFooterDateTime() {
   const now = new Date();
   const options = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
