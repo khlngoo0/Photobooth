@@ -119,8 +119,13 @@ function capture() {
   ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
   ctx.restore();
 
-  // Only the camera capture is saved; overlay remains untouched
-  overlay.src = canvas.toDataURL("image/png"); // show captured photo in same window
+  // Capture only the camera feed
+  const capturedDataURL = canvas.toDataURL("image/png");
+
+  // Optional: you could download or send the capturedDataURL
+  console.log("Captured photo ready:", capturedDataURL);
+
+  // IMPORTANT: Do NOT change overlay.src — keeps your photo visible
 }
 
 /* Footer date/time live (no seconds) */
