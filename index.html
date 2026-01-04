@@ -53,11 +53,28 @@ body {
   opacity: 1;
 }
 
+#captured-photo {
+  width: 90%;
+  max-width: 360px;
+  margin: 20px auto;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 8px;
+  margin: 10px;
+}
+
 #footer-date {
   font-size: 0.9rem;
   color: #555;
   margin: 8px 0 20px 0;
 }
+
+  
 </style>
 </head>
 <body>
@@ -71,11 +88,17 @@ Take a Photo<br>with Hugo
   <img id="overlay" src="my-photo.png" alt="Overlay">
 </div>
 
+<!-- Captured photo -->
+<img id="captured-photo" alt="Captured Photo" src="">
+
+<!-- Share button -->
+<button id="share-photo">Share / Save</button>
+
 <footer id="footer-date"></footer>
 
 <canvas id="canvas" hidden></canvas>
 <audio id="shutter" src="https://cdn.jsdelivr.net/gh/jshawl/AudioFX/sounds/camera-shutter-click-03.mp3"></audio>
-
+  
 <script>
 const video = document.getElementById("video");
 const overlay = document.getElementById("overlay");
@@ -84,6 +107,8 @@ const ctx = canvas.getContext("2d");
 const shutter = document.getElementById("shutter");
 const footer = document.getElementById("footer-date");
 const headerText = document.getElementById("logo").innerText;
+const capturedImg = document.getElementById("captured-photo");
+const shareBtn = document.getElementById("share-photo");
 
 /* Front camera */
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
@@ -97,8 +122,7 @@ navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: fals
 document.body.addEventListener("touchstart", () => {
   shutter.play().then(() => { shutter.pause(); shutter.currentTime = 0; });
 }, { once: true });
-
-/* Tap live window to capture */
+/* Capture photo */
 document.getElementById("live-window").addEventListener("click", capture);
 
 function capture() {
@@ -108,13 +132,12 @@ function capture() {
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // Mirror selfie
+  // Mirror video
   ctx.save();
   ctx.scale(-1,1);
   ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
   ctx.restore();
-
-  // Draw overlay photo full-size
+  // Draw overlay
   if (overlay.complete) {
     ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
   }
@@ -133,10 +156,30 @@ function capture() {
   ctx.fillStyle = "#ffffff";
   ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.height*0.05);
 
-  // Photo is ready in canvas
-  // No auto-download
-  console.log("Captured photo is ready in canvas.");
+  // Show captured photo
+  capturedImg.src = canvas.toDataURL("image/png");
 }
+
+  /* Share button using Web Share API */
+shareBtn.addEventListener("click", async () => {
+  if (!canvas) return alert("No photo captured yet!");
+  canvas.toBlob(async (blob) => {
+    const filesArray = [new File([blob], `photo-${Date.now()}.png`, { type: blob.type })];
+    if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+      try {
+        await navigator.share({
+          files: filesArray,
+          title: "My Photo",
+          text: "Take a photo with Hugo!"
+        });
+      } catch (err) {
+        alert("Share canceled or failed: " + err);
+      }
+    } else {
+      alert("Sharing not supported on this device.");
+    }
+  }, "image/png");
+});
 
 /* Footer live date/time */
 function updateFooterDateTime() {
