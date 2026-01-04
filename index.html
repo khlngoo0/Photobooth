@@ -2,19 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Photoism iPhone Photobooth</title>
+<title>Live Overlay Photobooth</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
-<!-- Google Font for cursive logo -->
+<!-- Google Font for logo -->
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
 
 <style>
 body {
   margin: 0;
-  background: #ffffff;
+  background: #fff;
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   text-align: center;
   touch-action: manipulation;
@@ -31,58 +31,34 @@ body {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
-/* Camera preview */
-.camera {
+/* Live photo window */
+#live-window {
   position: relative;
-}
-
-video {
   width: 100vw;
-  max-height: 65vh;
+  max-height: 70vh;
+  margin: 0 auto;
   background: black;
-  transform: scaleX(-1); /* mirror selfie */
-}
-
-/* Flash effect */
-.flash {
-  position: absolute;
-  inset: 0;
-  background: white;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.flash.active {
-  animation: flash 0.18s;
-}
-
-@keyframes flash {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-/* Countdown */
-.countdown {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 4.5rem;
-  font-weight: 600;
-  color: white;
-  text-shadow: 0 0 12px black;
-}
-
-/* Captured photo display */
-.photo {
-  width: 240px;
-  height: 320px;
-  margin: 20px auto;
+  overflow: hidden;
   border-radius: 14px;
-  background: #000;
-  background-size: cover;
-  background-position: center;
+}
+
+/* Video feed */
+#video {
+  width: 100%;
+  transform: scaleX(-1); /* mirror selfie */
+  display: block;
+}
+
+/* Overlay your photo on top of video */
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  object-fit: cover;
+  opacity: 1;
 }
 
 /* Footer date/time */
@@ -99,13 +75,11 @@ video {
 
 <header id="logo">Hugo</header>
 
-<div class="camera">
+<div id="live-window">
   <video id="video" autoplay playsinline></video>
-  <div class="flash" id="flash"></div>
-  <div class="countdown" id="countdown"></div>
+  <img id="overlay" src="my-photo.png" alt="Overlay">
 </div>
 
-<div class="photo" id="photo"></div>
 <footer id="footer-date"></footer>
 
 <canvas id="canvas" hidden></canvas>
@@ -113,94 +87,26 @@ video {
 
 <script>
 const video = document.getElementById("video");
+const overlay = document.getElementById("overlay");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const flash = document.getElementById("flash");
-const countdownEl = document.getElementById("countdown");
 const shutter = document.getElementById("shutter");
-const photoEl = document.getElementById("photo");
 const footer = document.getElementById("footer-date");
 
-/* Overlay photo */
-const myPhoto = new Image();
-myPhoto.src = "my-photo.png"; // Put your PNG in the same folder
-myPhoto.onload = () => console.log("Overlay loaded");
-
 /* Front camera */
-navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "user" },
-  audio: false
-}).then(stream => video.srcObject = stream);
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+  .then(stream => video.srcObject = stream);
 
 /* Unlock audio on iOS */
 document.body.addEventListener("touchstart", () => {
   shutter.play().then(() => { shutter.pause(); shutter.currentTime = 0; });
 }, { once: true });
 
-/* Tap anywhere to take photo */
-document.body.addEventListener("touchstart", async () => {
-  await countdown(3);
-  capture();
-});
-
-/* Countdown */
-function countdown(n) {
-  return new Promise(resolve => {
-    countdownEl.textContent = n;
-    const t = setInterval(() => {
-      n--;
-      if (n === 0) {
-        clearInterval(t);
-        countdownEl.textContent = "";
-        resolve();
-      } else countdownEl.textContent = n;
-    }, 1000);
-  });
-}
-
-/* Draw Photoism-style frame + overlay */
-function drawPhotoismFrame() {
-  // Full-size overlay
-  if (myPhoto.complete) {
-    ctx.drawImage(myPhoto, 0, 0, canvas.width, canvas.height);
-  }
-
-  // White border
-  ctx.lineWidth = canvas.width * 0.035;
-  ctx.strokeStyle = "#ffffff";
-  ctx.strokeRect(
-    ctx.lineWidth / 2,
-    ctx.lineWidth / 2,
-    canvas.width - ctx.lineWidth,
-    canvas.height - ctx.lineWidth
-  );
-
-  // Soft vignette
-  const grad = ctx.createRadialGradient(
-    canvas.width / 2,
-    canvas.height / 2,
-    canvas.width / 4,
-    canvas.width / 2,
-    canvas.height / 2,
-    canvas.width / 1.1
-  );
-  grad.addColorStop(0, "transparent");
-  grad.addColorStop(1, "rgba(0,0,0,0.25)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Date + time inside photo
-  const now = new Date();
-  const options = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
-  ctx.font = `${canvas.width * 0.035}px Helvetica`;
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.fillText(now.toLocaleString(undefined, options), canvas.width / 2, canvas.height - canvas.width * 0.04);
-}
+/* Tap anywhere on live window to capture */
+document.getElementById("live-window").addEventListener("click", () => capture());
 
 /* Capture function */
 function capture() {
-  flash.classList.add("active");
   shutter.currentTime = 0;
   shutter.play();
 
@@ -210,19 +116,29 @@ function capture() {
   // Mirror selfie
   ctx.save();
   ctx.scale(-1,1);
-  ctx.filter = "contrast(1.05)";
-  ctx.drawImage(video, -canvas.width, 0);
+  ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
   ctx.restore();
 
-  drawPhotoismFrame();
+  // Draw overlay photo full-size
+  const overlayImg = new Image();
+  overlayImg.src = "my-photo.png";
+  overlayImg.onload = () => {
+    ctx.drawImage(overlayImg, 0, 0, canvas.width, canvas.height);
 
-  // Show captured photo
-  photoEl.style.backgroundImage = `url(${canvas.toDataURL("image/png")})`;
+    // Optional: date/time on photo
+    const now = new Date();
+    const options = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
+    ctx.font = `${canvas.width * 0.035}px Helvetica`;
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText(now.toLocaleString(undefined, options), canvas.width/2, canvas.height - canvas.width*0.04);
 
-  setTimeout(() => flash.classList.remove("active"), 180);
+    // Show captured photo in the live window
+    overlay.src = canvas.toDataURL("image/png");
+  };
 }
 
-/* Footer date/time without seconds, updates every minute */
+/* Footer date/time live (no seconds) */
 function updateFooterDateTime() {
   const now = new Date();
   const options = { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false };
@@ -230,7 +146,6 @@ function updateFooterDateTime() {
 }
 updateFooterDateTime();
 setInterval(updateFooterDateTime, 60000);
-
 </script>
 
 </body>
